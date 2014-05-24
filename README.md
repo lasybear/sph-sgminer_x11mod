@@ -1,6 +1,5 @@
 # sgminer
 
-
 ## Introduction
 
 This is a multi-threaded multi-pool GPU miner with ATI GPU monitoring,
@@ -10,14 +9,55 @@ Jeff Garzik (jgarzik).
 
 **releases**: https://github.com/veox/sgminer/releases
 
-**git tree**: https://github.com/veox/sgminer
-
-**issues**: https://github.com/veox/sgminer/issues
-
-**irc**: `#sgminer` on freenode
-
 License: GPLv3.  See `COPYING` for details.
 
+## Mod x11 (separate kernels)
+
+0. Use "kernel" : "x11mod" in config file or -k x11mod via command line.
+1. Do not use thread concurrency higher than 15.
+2. In case of instability please set a little bit lower engine frequency than a original sgminer.
+3. Tested only on Ubuntu x64 and BAMT. 
+4. Tested only on single R9 280x and rig of 5 x R9 270x.
+
+My experience:
+MSI R9 280x 3.4 MH/s
+
+"intensity" : "15",
+"vector" : "1",
+"worksize" : "256",
+"kernel" : "x11mod",
+"thread-concurrency" : "8192",
+"lookup-gap" : "2",
+"gpu-engine" : "1200",
+"gpu-memclock" : "1500",
+"gpu-powertune" : "20",
+"gpu-vddc" : "1.200",
+"gpu-threads" : "2"
+
+Rig
+5 x Sapphire R9 270x Vapor-X 10.43 MH/s (~2.08 MH/s per card)
+"intensity" : "15",
+"vectors" : "1",
+"worksize" : "128",
+"kernel" : "x11mod",
+"thread-concurrency" : "8192",
+"lookup-gap" : "2",
+"gpu-engine" : "1150",
+"gpu-memclock" : "1500",
+"gpu-powertune" : "20",
+"gpu-vddc" : "1.150,1.150,1.150,1.150,1.150",
+"gpu-threads" : "2"
+
+
+NO HIDDEN MININGS )
+
+If you satisfied, please donate
+
+BTC: 1LykvDuT7PCJ2xgT513RsyWQSZ9pbrDFa6
+MRO: 47mfp5AVx6R1Gdc6qPZeV2Ceq1Aw3HFXLRHgjW2pHszVRLzg5pe4tNPMz1NSmAYADGFmUDthoLzyBDBGEz7AoFya9QZKWcu
+LTC: LYpe5amuVYdSKmi3D5HCoKMeBd6yty8xVi
+
+Thanks.
 
 ## Documentation
 
@@ -63,7 +103,6 @@ sgminer-specific configuration options:
 ### *nix build instructions
 
 If needed, place include headers (`*.h` files) from `ADL_SDK_*<VERSION>*.zip` in `sgminer/ADL_SDK`.
-
 Then:
 
     autoreconf -i

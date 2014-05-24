@@ -7704,7 +7704,7 @@ typedef union {
 } hash_t;
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void blake(__global unsigned char* block, volatile __global hash_t* hashes)
+__kernel void blake(__global unsigned char* block, __global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -7760,7 +7760,7 @@ __kernel void blake(__global unsigned char* block, volatile __global hash_t* has
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void bmw(volatile __global hash_t* hashes)
+__kernel void bmw(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -7821,7 +7821,7 @@ __kernel void bmw(volatile __global hash_t* hashes)
 
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void groestl(volatile __global hash_t* hashes)
+__kernel void groestl(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -7893,7 +7893,7 @@ __kernel void groestl(volatile __global hash_t* hashes)
 
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void skein(volatile __global hash_t* hashes)
+__kernel void skein(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -7928,7 +7928,7 @@ __kernel void skein(volatile __global hash_t* hashes)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void jh(volatile __global hash_t* hashes)
+__kernel void jh(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -7980,7 +7980,7 @@ __kernel void jh(volatile __global hash_t* hashes)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void keccak(volatile __global hash_t* hashes)
+__kernel void keccak(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -8026,7 +8026,7 @@ __kernel void keccak(volatile __global hash_t* hashes)
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void luffa(volatile __global hash_t* hashes)
+__kernel void luffa(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -8092,7 +8092,7 @@ __kernel void luffa(volatile __global hash_t* hashes)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void cubehash(volatile __global hash_t* hashes)
+__kernel void cubehash(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -8156,7 +8156,7 @@ __kernel void cubehash(volatile __global hash_t* hashes)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void shavite(volatile __global hash_t* hashes)
+__kernel void shavite(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -8233,7 +8233,7 @@ __kernel void shavite(volatile __global hash_t* hashes)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void simd(volatile __global hash_t* hashes)
+__kernel void simd(__global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
@@ -8353,7 +8353,7 @@ __kernel void simd(volatile __global hash_t* hashes)
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void echo(volatile __global hash_t* hashes, volatile __global uint* output, const ulong target)
+__kernel void echo(__global hash_t* hashes, __global uint* output, const ulong target)
 {
     uint gid = get_global_id(0);
     hash_t hash;
