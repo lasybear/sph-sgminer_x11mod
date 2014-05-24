@@ -14,7 +14,7 @@ License: GPLv3.  See `COPYING` for details.
 ## Mod x11 (separate kernels)
 
 0. Use "kernel" : "x11mod" in config file or -k x11mod via command line.
-1. Do not use thread concurrency higher than 15.
+1. Do not use intensity higher than 15.
 2. In case of instability please set a little bit lower engine frequency than a original sgminer.
 3. Tested only on Ubuntu x64 and BAMT. 
 4. Tested only on single R9 280x and rig of 5 x R9 270x.
