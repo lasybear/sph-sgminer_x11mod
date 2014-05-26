@@ -57,7 +57,7 @@ NO HIDDEN MININGS )
 **lasybear**
 * **`BTC: 1LykvDuT7PCJ2xgT513RsyWQSZ9pbrDFa6`**
 * **`MRO: 47mfp5AVx6R1Gdc6qPZeV2Ceq1Aw3HFXLRHgjW2pHszVRLzg5pe4tNPMz1NSmAYADGFmUDthoLzyBDBGEz7AoFya9QZKWcu`**
-* **`LTC: LYpe5amuVYdSKmi3D5HCoKMeBd6yty8xVi`**
+* **`LTC: LXSi41BKaCmxHKLiEZdstk648X79YjcXpv`**
 * **`DRK: XxMb95zfrxw8Csh9hSX3T98McDGZqk3Qrm`**
 
 Thanks.
