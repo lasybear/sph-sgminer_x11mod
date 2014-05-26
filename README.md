@@ -14,14 +14,7 @@ License: GPLv3.  See `COPYING` for details.
 ## Mod x11 (separate kernels)
 
 0. Use "kernel" : "x11mod" in config file or -k x11mod via command line.
-<<<<<<< HEAD
 1. In case of instability please set a little bit lower engine frequency than a original sgminer.
-=======
-1. Do not use intensity higher than 15.
-2. In case of instability please set a little bit lower engine frequency than a original sgminer.
-3. Tested only on Ubuntu x64 and BAMT. 
-4. Tested only on single R9 280x and rig of 5 x R9 270x.
->>>>>>> 01e805db4490fa607d233d3a5feb96eeb48c779c
 
 My experience:
 MSI R9 280x 3.4 MH/s
@@ -59,11 +52,13 @@ NO HIDDEN MININGS )
 
 ####Remember remember the 5th of November
 ####BTC: 1AiCRMxgf1ptVQwx6hDuKMu4f7F27QmJC2
+####DRK: XrVcX5LEiUVxWRTBMbomopJkfHc3uGDQHe
 
 ####lasybear
 ####BTC: 1LykvDuT7PCJ2xgT513RsyWQSZ9pbrDFa6
 ####MRO: 47mfp5AVx6R1Gdc6qPZeV2Ceq1Aw3HFXLRHgjW2pHszVRLzg5pe4tNPMz1NSmAYADGFmUDthoLzyBDBGEz7AoFya9QZKWcu
 ####LTC: LYpe5amuVYdSKmi3D5HCoKMeBd6yty8xVi
+####DRK: XxMb95zfrxw8Csh9hSX3T98McDGZqk3Qrm
 
 Thanks.
 
