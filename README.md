@@ -17,7 +17,8 @@ License: GPLv3.  See `COPYING` for details.
 1. In case of instability please set a little bit lower engine frequency than a original sgminer.
 
 My experience:
-MSI R9 280x **3.4 MH/s**
+
+Single MSI R9 280x **3.4 MH/s**
 * `"intensity" : "15",`
 * `"vector" : "1",`
 * `"worksize" : "256",`
