@@ -388,10 +388,11 @@ enum cl_kernels {
 	KL_SIFCOIN,
 	KL_DARKCOIN,	// kernels starting from this will have difficulty calculated by using bitcoin algorithm
 	KL_MYRIADCOIN_GROESTL,
-	KL_X11MOD,
-	KL_FUGUECOIN,	// kernels starting from this will have difficulty calculated by using fuguecoin algorithm
+	KL_FUGUECOIN,
 	KL_GROESTLCOIN,
 	KL_TWECOIN,
+	KL_MARUCOIN,
+	KL_X11MOD,
 };
 
 enum dev_reason {
@@ -1513,7 +1514,6 @@ enum diff_calc_mode {
 	DM_BITCOIN,
 	DM_QUARKCOIN,
 	DM_LITECOIN,
-	DM_FUGUECOIN,
 };
 
 #endif /* __MINER_H__ */

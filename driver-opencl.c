@@ -34,24 +34,24 @@
 #include "adl.h"
 #include "util.h"
 
-#define CL_CHECK(_expr)                                                         \
-    do {                                                                         \
-	cl_int _err = _expr;                                                       \
-	if (_err == CL_SUCCESS)                                                    \
-	    break;                                                                   \
-	applog(LOG_ERR, "OpenCL Error: '%s' returned %d!\n", #_expr, (int)_err); \
-	abort();                                                                   \
+#define CL_CHECK(_expr) \
+    do { \
+        cl_int _err = _expr; \
+        if (_err == CL_SUCCESS) \
+            break; \
+        applog(LOG_ERR, "OpenCL Error: '%s' returned %d!\n", #_expr, (int)_err); \
+        abort(); \
     } while (0)
 
-#define CL_CHECK_ERR(_expr)                                                     \
-    ({                                                                           \
-	cl_int _err = CL_INVALID_VALUE;                                            \
-	typeof(_expr) _ret = _expr;                                                \
-	if (_err != CL_SUCCESS) {                                                  \
-	    applog(LOG_ERR, "OpenCL Error: '%s' returned %d!\n", #_expr, (int)_err); \
-	    abort();                                                                 \
-	}                                                                          \
-	_ret;                                                                      \
+#define CL_CHECK_ERR(_expr) \
+    ({ \
+        cl_int _err = CL_INVALID_VALUE; \
+        typeof(_expr) _ret = _expr; \
+        if (_err != CL_SUCCESS) { \
+            applog(LOG_ERR, "OpenCL Error: '%s' returned %d!\n", #_expr, (int)_err); \
+            abort(); \
+        } \
+        _ret; \
     })
 
 /* TODO: cleanup externals ********************/
@@ -229,6 +229,8 @@ static enum cl_kernels select_kernel(char *arg)
 		return KL_PSW;
 	if (!strcmp(arg, DARKCOIN_KERNNAME))
 		return KL_DARKCOIN;
+	if (!strcmp(arg, X11MOD_KERNNAME))
+		return KL_X11MOD;
 	if (!strcmp(arg, QUBITCOIN_KERNNAME))
 		return KL_QUBITCOIN;
 	if (!strcmp(arg, QUARKCOIN_KERNNAME))
@@ -247,8 +249,8 @@ static enum cl_kernels select_kernel(char *arg)
 		return KL_SIFCOIN;
 	if (!strcmp(arg, TWECOIN_KERNNAME))
 		return KL_TWECOIN;
-	if (!strcmp(arg, X11MOD_KERNNAME))
-		return KL_X11MOD;
+	if (!strcmp(arg, MARUCOIN_KERNNAME))
+		return KL_MARUCOIN;
 
 	return KL_NONE;
 }
@@ -266,9 +268,7 @@ char *set_kernel(char *arg)
 	if (kern == KL_NONE)
 		return "Invalid parameter to set_kernel";
 	gpus[device++].kernel = kern;
-	if (kern >= KL_FUGUECOIN)
-		dm_mode = DM_FUGUECOIN;
-	else if (kern >= KL_DARKCOIN)
+	if (kern >= KL_DARKCOIN)
 		dm_mode = DM_BITCOIN;
 	else if(kern >= KL_QUARKCOIN)
 		dm_mode = DM_QUARKCOIN;
@@ -1105,7 +1105,6 @@ static cl_int queue_sph_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unus
 	return status;
 }
 
-
 static cl_int queue_x11mod_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
 	unsigned char *midstate = blk->work->midstate;
@@ -1169,6 +1168,7 @@ static void set_threads_hashes(unsigned int vectors, unsigned int compute_shader
 				threads = minthreads;
 		}
 	}
+
 	*globalThreads = threads;
 	*hashes = threads * vectors;
 }
@@ -1465,8 +1465,12 @@ static bool opencl_thread_prepare(struct thr_info *thr)
 			case KL_TWECOIN:
 				cgpu->kname = TWECOIN_KERNNAME;
 				break;
+			case KL_MARUCOIN:
+				cgpu->kname = MARUCOIN_KERNNAME;
+				break;
 			case KL_X11MOD:
 				cgpu->kname = X11MOD_KERNNAME;
+				break;
 			default:
 				break;
 		}
@@ -1495,6 +1499,9 @@ static bool opencl_thread_init(struct thr_info *thr)
 	}
 
 	switch (clState->chosen_kernel) {
+	case KL_X11MOD:
+		thrdata->queue_kernel_parameters = &queue_x11mod_kernel;
+		break;
 	case KL_ALEXKARNEW:
 	case KL_ALEXKAROLD:
 	case KL_CKOLIVAS:
@@ -1512,10 +1519,8 @@ static bool opencl_thread_init(struct thr_info *thr)
 	case KL_GROESTLCOIN:
 	case KL_SIFCOIN:
 	case KL_TWECOIN:
+	case KL_MARUCOIN:
 		thrdata->queue_kernel_parameters = &queue_sph_kernel;
-		break;
-	case KL_X11MOD:
-		thrdata->queue_kernel_parameters = &queue_x11mod_kernel;
 		break;
 	default:
 		applog(LOG_ERR, "Failed to choose kernel in opencl_thread_init");
@@ -1523,6 +1528,7 @@ static bool opencl_thread_init(struct thr_info *thr)
 	}
 
 	thrdata->res = calloc(buffersize, 1);
+
 	if (!thrdata->res) {
 		free(thrdata);
 		applog(LOG_ERR, "Failed to calloc in opencl_thread_init");
@@ -1553,11 +1559,12 @@ static bool opencl_prepare_work(struct thr_info __maybe_unused *thr, struct work
 extern int opt_dynamic_interval;
 
 #define CL_ENQUEUE_KERNEL(KL, GWO) \
-		    status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel_##KL, 1, GWO, globalThreads, localThreads, 0, NULL, NULL); \
-		    if (unlikely(status != CL_SUCCESS)) { \
-			applog(LOG_ERR, "Error %d: Enqueueing kernel #KL onto command queue. (clEnqueueNDRangeKernel)", status); \
-			return -1; \
-		    } 
+	status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel_##KL, 1, GWO, globalThreads, localThreads, 0, NULL, NULL); \
+	if (unlikely(status != CL_SUCCESS)) { \
+	    applog(LOG_ERR, "Error %d: Enqueueing kernel #KL onto command queue. (clEnqueueNDRangeKernel)", status); \
+	    return -1; \
+	}
+
 
 static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 				int64_t __maybe_unused max_nonce)
@@ -1570,7 +1577,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 	const int dynamic_us = opt_dynamic_interval * 1000;
 
 	cl_int status;
-	size_t globalThreads[1] = { 1 };
+	size_t globalThreads[1];
 	size_t localThreads[1] = { clState->wsize };
 	int64_t hashes;
 	int found = FOUND;
@@ -1607,63 +1614,56 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 
 	if (clState->chosen_kernel == KL_X11MOD) {
 	    if (clState->goffset) {
-		    size_t global_work_offset[1];
-		    global_work_offset[0] = work->blk.nonce;
+		size_t global_work_offset[1];
+		global_work_offset[0] = work->blk.nonce;
 
-		    CL_ENQUEUE_KERNEL(blake, global_work_offset);
-		    CL_ENQUEUE_KERNEL(bmw, global_work_offset);
-		    CL_ENQUEUE_KERNEL(groestl, global_work_offset);
-		    CL_ENQUEUE_KERNEL(skein, global_work_offset);
-		    CL_ENQUEUE_KERNEL(jh, global_work_offset);
-		    CL_ENQUEUE_KERNEL(keccak, global_work_offset);
-		    CL_ENQUEUE_KERNEL(luffa, global_work_offset);
-		    CL_ENQUEUE_KERNEL(cubehash, global_work_offset);
-		    CL_ENQUEUE_KERNEL(shavite, global_work_offset);
-		    CL_ENQUEUE_KERNEL(simd, global_work_offset)
-		    CL_ENQUEUE_KERNEL(echo, global_work_offset);
-	    } 
+		CL_ENQUEUE_KERNEL(blake, global_work_offset);
+		CL_ENQUEUE_KERNEL(bmw, global_work_offset);
+		CL_ENQUEUE_KERNEL(groestl, global_work_offset);
+		CL_ENQUEUE_KERNEL(skein, global_work_offset);
+		CL_ENQUEUE_KERNEL(jh, global_work_offset);
+		CL_ENQUEUE_KERNEL(keccak, global_work_offset);
+		CL_ENQUEUE_KERNEL(luffa, global_work_offset);
+		CL_ENQUEUE_KERNEL(cubehash, global_work_offset);
+		CL_ENQUEUE_KERNEL(shavite, global_work_offset);
+		CL_ENQUEUE_KERNEL(simd, global_work_offset)
+		CL_ENQUEUE_KERNEL(echo, global_work_offset);
+	    }
 	    else {
-		    CL_ENQUEUE_KERNEL(blake, NULL);
-		    CL_ENQUEUE_KERNEL(bmw, NULL);
-		    CL_ENQUEUE_KERNEL(groestl, NULL);
-		    CL_ENQUEUE_KERNEL(skein, NULL);
-		    CL_ENQUEUE_KERNEL(jh, NULL);
-		    CL_ENQUEUE_KERNEL(keccak, NULL);
-		    CL_ENQUEUE_KERNEL(luffa, NULL);
-		    CL_ENQUEUE_KERNEL(cubehash, NULL);
-		    CL_ENQUEUE_KERNEL(shavite, NULL);
-		    CL_ENQUEUE_KERNEL(simd, NULL)
-		    CL_ENQUEUE_KERNEL(echo, NULL);
-	    }
-
-	    status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer, CL_FALSE, 0,
-					 buffersize, thrdata->res, 0, NULL, NULL);
-	    if (unlikely(status != CL_SUCCESS)) {
-		    applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
-		    return -1;
-	    }
+		CL_ENQUEUE_KERNEL(blake, NULL);
+		CL_ENQUEUE_KERNEL(bmw, NULL);
+		CL_ENQUEUE_KERNEL(groestl, NULL);
+		CL_ENQUEUE_KERNEL(skein, NULL);
+		CL_ENQUEUE_KERNEL(jh, NULL);
+		CL_ENQUEUE_KERNEL(keccak, NULL);
+		CL_ENQUEUE_KERNEL(luffa, NULL);
+		CL_ENQUEUE_KERNEL(cubehash, NULL);
+		CL_ENQUEUE_KERNEL(shavite, NULL);
+		CL_ENQUEUE_KERNEL(simd, NULL)
+		CL_ENQUEUE_KERNEL(echo, NULL);
+            }
 	}
 	else {
 	    if (clState->goffset) {
-		    size_t global_work_offset[1];
+		size_t global_work_offset[1];
 
-		    global_work_offset[0] = work->blk.nonce;
-		    status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, global_work_offset,
-						    globalThreads, localThreads, 0,  NULL, NULL);
+		global_work_offset[0] = work->blk.nonce;
+		status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, global_work_offset,
+						globalThreads, localThreads, 0,  NULL, NULL);
 	    } else
-		    status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, NULL,
+		status = clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, NULL,
 						globalThreads, localThreads, 0,  NULL, NULL);
 	    if (unlikely(status != CL_SUCCESS)) {
-		    applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
-		    return -1;
+		applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+		return -1;
 	    }
+	}
 
-	    status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer, CL_FALSE, 0,
-					buffersize, thrdata->res, 0, NULL, NULL);
-	    if (unlikely(status != CL_SUCCESS)) {
-		    applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
-		    return -1;
-	    }
+	status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer, CL_FALSE, 0,
+				     buffersize, thrdata->res, 0, NULL, NULL);
+	if (unlikely(status != CL_SUCCESS)) {
+		applog(LOG_ERR, "Error: clEnqueueReadBuffer failed error %d. (clEnqueueReadBuffer)", status);
+		return -1;
 	}
 
 	/* The amount of work scanned can fluctuate when intensity changes
@@ -1714,6 +1714,7 @@ static void opencl_thread_shutdown(struct thr_info *thr)
 	else {
 	    clReleaseKernel(clState->kernel);
 	}
+
 	clReleaseProgram(clState->program);
 	clReleaseCommandQueue(clState->commandQueue);
 	clReleaseContext(clState->context);

@@ -9,7 +9,7 @@
 #define BUFFERSIZE (sizeof(uint32_t) * MAXBUFFERS)
 #define FOUND (0xFF)
 
-#define THASHBUFSIZE (8 * 16 * 16384)
+#define THASHBUFSIZE (8 * 16 * 4194304)
 
 extern void precalc_hash(dev_blk_ctx *blk, uint32_t *state, uint32_t *data);
 extern void postcalc_hash_async(struct thr_info *thr, struct work *work, uint32_t *res);

@@ -150,6 +150,7 @@ int opt_tcp_keepalive = 30;
 #else
 int opt_tcp_keepalive;
 #endif
+double opt_diff_mult = 1.0;
 
 char *opt_kernel_path;
 char *sgminer_path;
@@ -300,7 +301,7 @@ struct schedtime schedstart;
 struct schedtime schedstop;
 bool sched_paused;
 
-#define DM_SELECT(x, y, z, w) (dm_mode == DM_BITCOIN ? x : (dm_mode == DM_QUARKCOIN ? y : (dm_mode == DM_FUGUECOIN ? w : z) ))
+#define DM_SELECT(x, y, z) (dm_mode == DM_BITCOIN ? x : (dm_mode == DM_QUARKCOIN ? y : z))
 
 enum diff_calc_mode dm_mode = DM_LITECOIN;
 
@@ -1055,6 +1056,18 @@ static char *set_null(const char __maybe_unused *arg)
 	return NULL;
 }
 
+char *set_difficulty_multiplier(char *arg)
+{
+	char **endptr = NULL;
+	if (!(arg && arg[0]))
+		return "Invalid parameters for set difficulty multiplier";
+	opt_diff_mult = strtod(arg, endptr);
+	if (opt_diff_mult == 0 || endptr == arg)
+		return "Invalid value passed to set difficulty multiplier";
+
+	return NULL;
+}
+
 /* These options are available from config file or commandline */
 static struct opt_table opt_config_table[] = {
 	OPT_WITH_ARG("--api-allow",
@@ -1354,6 +1367,9 @@ static struct opt_table opt_config_table[] = {
 			"Display extra work time debug information"),
 	OPT_WITH_ARG("--pools",
 			opt_set_bool, NULL, NULL, opt_hidden),
+	OPT_WITH_ARG("--difficulty-multiplier",
+			set_difficulty_multiplier, NULL, NULL, 
+			"Difficulty multiplier for jobs received from stratum pools"),
 	OPT_ENDTABLE
 };
 
@@ -2962,7 +2978,7 @@ static void calc_diff(struct work *work, double known)
 	else {
 		double d64, dcut64;
 
-		d64 = (double) DM_SELECT(1, 256, 65536, 256) * truediffone;
+		d64 = (double) DM_SELECT(1, 256, 65536) * truediffone;
 
 		dcut64 = le256todouble(work->target);
 		if (unlikely(!dcut64))
@@ -3579,7 +3595,7 @@ static double share_diff(const struct work *work)
 	double d64, s64;
 	double ret;
 
-	d64 = (double) DM_SELECT(1, 256, 65536, 256) * truediffone;
+	d64 = (double) DM_SELECT(1, 256, 65536) * truediffone;
 	s64 = le256todouble(work->hash);
 	if (unlikely(!s64))
 		s64 = 0;
@@ -3902,7 +3918,7 @@ static void set_blockdiff(const struct work *work)
 	uint8_t pow = work->data[72];
 	int powdiff = (8 * (0x1d - 3)) - (8 * (pow - 3));
 	uint32_t diff32 = be32toh(*((uint32_t *)(work->data + 72))) & 0x00FFFFFF;
-	double numerator = DM_SELECT(0xFFFFULL, 0xFFFFFFULL, 0xFFFFFFFFULL, 0xFFFFULL) << powdiff;
+	double numerator = DM_SELECT(0xFFFFULL, 0xFFFFFFULL, 0xFFFFFFFFULL) << powdiff;
 	double ddiff = numerator / (double)diff32;
 
 	if (unlikely(current_diff != ddiff)) {
@@ -4256,6 +4272,9 @@ void write_config(FILE *fcfg)
 					break;
 				case KL_TWECOIN:
 					fprintf(fcfg, TWECOIN_KERNNAME);
+					break;
+				case KL_MARUCOIN:
+					fprintf(fcfg, MARUCOIN_KERNNAME);
 					break;
 				case KL_X11MOD:
 					fprintf(fcfg, X11MOD_KERNNAME);
@@ -5830,6 +5849,7 @@ out_unlock:
 static void gen_hash(unsigned char *data, unsigned char *hash, int len)
 {
 	unsigned char hash1[32];
+
 	sha256(data, len, hash1);
 	sha256(hash1, 32, hash);
 }
@@ -5847,7 +5867,7 @@ void set_target(unsigned char *dest_target, double diff)
 	}
 
 	// FIXME: is target set right?
-	d64 = (double) DM_SELECT(1, 256, 65536, 256) * truediffone;
+	d64 = (double) DM_SELECT(1, 256, 65536) * truediffone;
 	d64 /= diff;
 
 	dcut64 = d64 / bits192;
@@ -5880,6 +5900,7 @@ void set_target(unsigned char *dest_target, double diff)
 
 	if (opt_debug) {
 		char *htarget = bin2hex(target, 32);
+
 		applog(LOG_DEBUG, "Generated target %s", htarget);
 		free(htarget);
 	}
@@ -5909,9 +5930,8 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 	cg_dwlock(&pool->data_lock);
 
 	/* Generate merkle root */
-	if (gpus[i].kernel == KL_FUGUECOIN || gpus[i].kernel == KL_GROESTLCOIN || gpus[i].kernel == KL_TWECOIN) {
+	if (gpus[0].kernel == KL_FUGUECOIN || gpus[0].kernel == KL_GROESTLCOIN || gpus[0].kernel == KL_TWECOIN)
 		sha256(pool->coinbase, pool->swork.cb_len, merkle_root);
-	}
 	else
 		gen_hash(pool->coinbase, merkle_root, pool->swork.cb_len);
 	memcpy(merkle_sha, merkle_root, 32);
@@ -6097,6 +6117,9 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 		case KL_TWECOIN:
 			twecoin_regenhash(work);
 			break;
+		case KL_MARUCOIN:
+			marucoin_regenhash(work);
+			break;
 		default:
 			scrypt_regenhash(work);
 			break;
@@ -6121,7 +6144,7 @@ bool test_nonce_diff(struct work *work, uint32_t nonce, double diff)
 	uint64_t *hash64 = (uint64_t *)(work->hash + 24), diff64;
 
 	rebuild_nonce(work, nonce);
-	diff64 = DM_SELECT(0x00000000ffff0000ULL, 0x000000ffff000000ULL, 0x0000ffff00000000ULL, 0x00000000ffff0000ULL);
+	diff64 = DM_SELECT(0x00000000ffff0000ULL, 0x000000ffff000000ULL, 0x0000ffff00000000ULL);
 	diff64 /= diff;
 
 	return (le64toh(*hash64) <= diff64);
@@ -6130,11 +6153,11 @@ bool test_nonce_diff(struct work *work, uint32_t nonce, double diff)
 static void update_work_stats(struct thr_info *thr, struct work *work)
 {
 	double test_diff = current_diff;
-	test_diff *= DM_SELECT(1, 256, 65536, 256);
+	test_diff *= DM_SELECT(1, 256, 65536);
 
 	work->share_diff = share_diff(work);
 
-	test_diff *= DM_SELECT(1, 256, 65536, 256);
+	test_diff *= DM_SELECT(1, 256, 65536);
 
 	if (unlikely(work->share_diff >= test_diff)) {
 		work->block = true;

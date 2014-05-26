@@ -30,8 +30,8 @@ typedef struct {
 	cl_program program;
 	cl_mem outputBuffer;
 	cl_mem CLbuffer0;
+        cl_mem hash_buffer;
 	cl_mem padbuffer8;
-	cl_mem hash_buffer;
 	size_t padbufsize;
 	unsigned char cldata[80];
 	bool hasBitAlign;

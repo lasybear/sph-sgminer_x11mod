@@ -215,10 +215,9 @@ void patch_opcodes(char *w, unsigned remaining)
 #define CL_CREATE_KERNEL(name) \
 	clState->kernel_##name = clCreateKernel(clState->program, #name, &status); \
 	if (status != CL_SUCCESS) { \
-		applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel #name)", status); \
-		return NULL; \
+	    applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel #name)", status); \
+	    return NULL; \
 	}
-
 
 _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 {
@@ -329,12 +328,14 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	/////////////////////////////////////////////////////////////////
 	// Create an OpenCL command queue
 	/////////////////////////////////////////////////////////////////
-	if (cgpu->kernel == KL_X11MOD)
-	    clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
-						     0, &status);
-	else
-	    clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
-						     CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
+        if (cgpu->kernel == KL_X11MOD)
+            clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
+                                                     0, &status);
+        else
+            clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
+                                                     CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
+//	clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
+//						     CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
 
 	if (status != CL_SUCCESS) /* Try again without OOE enable */
 		clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu], 0 , &status);
@@ -516,6 +517,11 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			applog(LOG_WARNING, "Kernel twecoin is experimental.");
 			strcpy(filename, TWECOIN_KERNNAME".cl");
 			strcpy(binaryfilename, TWECOIN_KERNNAME);
+			break;
+		case KL_MARUCOIN:
+			applog(LOG_WARNING, "Kernel marucoin is experimental.");
+			strcpy(filename, MARUCOIN_KERNNAME".cl");
+			strcpy(binaryfilename, MARUCOIN_KERNNAME);
 			break;
 		case KL_X11MOD:
 			applog(LOG_WARNING, "Kernel x11mod is experimental.");
@@ -889,7 +895,12 @@ built:
 		applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
 		return NULL;
 	}
+
 	clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, BUFFERSIZE, NULL, &status);
+	if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
+		return NULL;
+	}
 
 	clState->hash_buffer = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, THASHBUFSIZE, NULL, &status);
 	if (status != CL_SUCCESS && !clState->hash_buffer) {
@@ -897,10 +908,6 @@ built:
 		return NULL;
 	}
 
-	if (status != CL_SUCCESS) {
-		applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
-		return NULL;
-	}
 
 	return clState;
 }
