@@ -107,25 +107,6 @@ typedef union {
     ulong h8[8];
 } hash_t;
 
-/*
-__attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global unsigned char* block, volatile __global uint* output, const ulong target)
-{
-    uint gid = get_global_id(0);
-
-    __local sph_u32 AES0[256], AES1[256], AES2[256], AES3[256];
-    int init = get_local_id(0);
-    int step = get_local_size(0);
-    for (int i = init; i < 256; i += step)
-    {
-        AES0[i] = AES0_C[i];
-        AES1[i] = AES1_C[i];
-        AES2[i] = AES2_C[i];
-        AES3[i] = AES3_C[i];
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-*/
-
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void blake(__global unsigned char* block, __global hash_t* hashes)
 {
