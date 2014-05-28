@@ -219,6 +219,48 @@ void patch_opcodes(char *w, unsigned remaining)
 	    return NULL; \
 	}
 
+bool allocateHashBuffer(unsigned int gpu, _clState *clState) {
+	cl_int status;
+
+	struct cgpu_info *cgpu = &gpus[gpu];
+	unsigned int threads = 0;
+
+	while (threads < clState->wsize) {
+		if (cgpu->rawintensity > 0) {
+			threads = cgpu->rawintensity;
+		} else if (cgpu->xintensity > 0) {
+			threads = clState->compute_shaders * cgpu->xintensity;
+		} else {
+			threads = 1 << cgpu->intensity;
+		}
+		if (threads < clState->wsize) {
+			if (likely(cgpu->intensity < MAX_INTENSITY))
+				cgpu->intensity++;
+			else
+				threads = clState->wsize;
+		}
+	}
+
+	unsigned long int bufsize = (64 * threads);
+
+	if ((bufsize > cgpu->max_alloc) || (bufsize == 0)) {
+		applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu",
+			   gpu, (long unsigned int)(cgpu->max_alloc));
+		applog(LOG_WARNING, "Your settings come to %d", (int)bufsize);
+		return false;
+	}
+	applog(LOG_DEBUG, "Creating hash buffer sized %d", (int)bufsize);
+
+	clState->hash_buffer = NULL;
+	clState->hash_buffer = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, bufsize, NULL, &status);
+	if (status != CL_SUCCESS && !clState->hash_buffer) {
+		applog(LOG_ERR, "Error %d: clCreateBuffer (hash_buffer), decrease intensity/xintensity/rawintensity", status);
+		return false;
+	}
+
+	return true;
+}
+
 _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 {
 	_clState *clState = calloc(1, sizeof(_clState));
@@ -328,14 +370,12 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	/////////////////////////////////////////////////////////////////
 	// Create an OpenCL command queue
 	/////////////////////////////////////////////////////////////////
-        if (cgpu->kernel == KL_X11MOD)
-            clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
-                                                     0, &status);
-        else
-            clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
-                                                     CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
-//	clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
-//						     CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
+	if ((cgpu->kernel == KL_X11MOD) || (cgpu->kernel == KL_X13MOD))
+		clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
+							     0, &status);
+	else
+		clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
+							     CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &status);
 
 	if (status != CL_SUCCESS) /* Try again without OOE enable */
 		clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu], 0 , &status);
@@ -527,6 +567,11 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			applog(LOG_WARNING, "Kernel x11mod is experimental.");
 			strcpy(filename, X11MOD_KERNNAME".cl");
 			strcpy(binaryfilename, X11MOD_KERNNAME);
+			break;
+		case KL_X13MOD:
+			applog(LOG_WARNING, "Kernel x13mod is experimental.");
+			strcpy(filename, X13MOD_KERNNAME".cl");
+			strcpy(binaryfilename, X13MOD_KERNNAME);
 			break;
 		case KL_NONE: /* Shouldn't happen */
 			break;
@@ -859,6 +904,21 @@ built:
 	    CL_CREATE_KERNEL(simd);
 	    CL_CREATE_KERNEL(echo);
 	}
+	else if (clState->chosen_kernel == KL_X13MOD) {
+	    CL_CREATE_KERNEL(blake);
+	    CL_CREATE_KERNEL(bmw);
+	    CL_CREATE_KERNEL(groestl);
+	    CL_CREATE_KERNEL(skein);
+	    CL_CREATE_KERNEL(jh);
+	    CL_CREATE_KERNEL(keccak);
+	    CL_CREATE_KERNEL(luffa);
+	    CL_CREATE_KERNEL(cubehash);
+	    CL_CREATE_KERNEL(shavite);
+	    CL_CREATE_KERNEL(simd);
+	    CL_CREATE_KERNEL(echo);
+	    CL_CREATE_KERNEL(hamsi);
+	    CL_CREATE_KERNEL(fugue);
+	}
 	else {
 	    clState->kernel = clCreateKernel(clState->program, "search", &status);
 	    if (status != CL_SUCCESS) {
@@ -867,27 +927,33 @@ built:
 	    }
 	}
 
-	size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
-	size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
-
-	/* Use the max alloc value which has been rounded to a power of
-	 * 2 greater >= required amount earlier */
-	if (bufsize > cgpu->max_alloc) {
-		applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu",
-			   gpu, (long unsigned int)(cgpu->max_alloc));
-		applog(LOG_WARNING, "Your scrypt settings come to %d", (int)bufsize);
+	if ((cgpu->kernel == KL_X11MOD) || (cgpu->kernel == KL_X13MOD)) {
+		if (!allocateHashBuffer(gpu, clState))
+			return NULL;
 	}
-	applog(LOG_DEBUG, "Creating scrypt buffer sized %d", (int)bufsize);
-	clState->padbufsize = bufsize;
+	else {
+		size_t ipt = (1024 / cgpu->lookup_gap + (1024 % cgpu->lookup_gap > 0));
+		size_t bufsize = 128 * ipt * cgpu->thread_concurrency;
 
-	/* This buffer is weird and might work to some degree even if
-	 * the create buffer call has apparently failed, so check if we
-	 * get anything back before we call it a failure. */
-	clState->padbuffer8 = NULL;
-	clState->padbuffer8 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, bufsize, NULL, &status);
-	if (status != CL_SUCCESS && !clState->padbuffer8) {
-		applog(LOG_ERR, "Error %d: clCreateBuffer (padbuffer8), decrease TC or increase LG", status);
-		return NULL;
+		/* Use the max alloc value which has been rounded to a power of
+		 * 2 greater >= required amount earlier */
+		if (bufsize > cgpu->max_alloc) {
+			applog(LOG_WARNING, "Maximum buffer memory device %d supports says %lu",
+				   gpu, (long unsigned int)(cgpu->max_alloc));
+			applog(LOG_WARNING, "Your scrypt settings come to %d", (int)bufsize);
+		}
+		applog(LOG_DEBUG, "Creating scrypt buffer sized %d", (int)bufsize);
+		clState->padbufsize = bufsize;
+
+		/* This buffer is weird and might work to some degree even if
+		 * the create buffer call has apparently failed, so check if we
+		 * get anything back before we call it a failure. */
+		clState->padbuffer8 = NULL;
+		clState->padbuffer8 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, bufsize, NULL, &status);
+		if (status != CL_SUCCESS && !clState->padbuffer8) {
+			applog(LOG_ERR, "Error %d: clCreateBuffer (padbuffer8), decrease TC or increase LG", status);
+			return NULL;
+		}
 	}
 
 	clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 128, NULL, &status);
@@ -902,11 +968,6 @@ built:
 		return NULL;
 	}
 
-	clState->hash_buffer = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, THASHBUFSIZE, NULL, &status);
-	if (status != CL_SUCCESS && !clState->hash_buffer) {
-		applog(LOG_ERR, "Error %d: clCreateBuffer (hash_buffer), decrease TC or increase LG", status);
-		return NULL;
-	}
 
 
 	return clState;

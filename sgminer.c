@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2011-2013 Con Kolivas
  * Copyright 2011-2012 Luke Dashjr
@@ -529,6 +530,7 @@ struct pool *add_pool(void)
 	/* Default pool name */
 	char buf[32];
 	sprintf(buf, "Pool %d", pool->pool_no);
+
 	pool->poolname = strdup(buf);
 
 	pools = realloc(pools, sizeof(struct pool *) * (total_pools + 2));
@@ -2451,7 +2453,7 @@ share_result(json_t *val, json_t *res, json_t *err, const struct work *work,
 		pool->last_share_diff = work->work_difficulty;
 		applog(LOG_DEBUG, "PROOF OF WORK RESULT: true (yay!!!)");
 		if (!QUIET) {
-			if (total_pools > 1) {
+			if (total_pools > 0) {
 				applog(LOG_NOTICE, "Accepted %s %s %d at %s %s%s",
 				       hashshow, cgpu->drv->name, cgpu->device_id, pool->poolname, resubmit ? "(resubmit)" : "", worktime);
 			} else
@@ -4278,6 +4280,9 @@ void write_config(FILE *fcfg)
 					break;
 				case KL_X11MOD:
 					fprintf(fcfg, X11MOD_KERNNAME);
+					break;
+				case KL_X13MOD:
+					fprintf(fcfg, X13MOD_KERNNAME);
 					break;
 			}
 		}
@@ -6118,6 +6123,7 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 			twecoin_regenhash(work);
 			break;
 		case KL_MARUCOIN:
+		case KL_X13MOD:
 			marucoin_regenhash(work);
 			break;
 		default:
@@ -7100,7 +7106,7 @@ static void *watchpool_thread(void __maybe_unused *userdata)
  * the screen at regular intervals, and restarts threads if they appear to have
  * died. */
 #define WATCHDOG_INTERVAL		2
-#define WATCHDOG_SICK_TIME		120
+#define WATCHDOG_SICK_TIME		240
 #define WATCHDOG_DEAD_TIME		600
 #define WATCHDOG_SICK_COUNT		(WATCHDOG_SICK_TIME/WATCHDOG_INTERVAL)
 #define WATCHDOG_DEAD_COUNT		(WATCHDOG_DEAD_TIME/WATCHDOG_INTERVAL)

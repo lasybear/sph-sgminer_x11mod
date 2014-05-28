@@ -26,6 +26,8 @@ typedef struct {
 	cl_kernel kernel_shavite;
 	cl_kernel kernel_simd;
 	cl_kernel kernel_echo;
+	cl_kernel kernel_hamsi;
+	cl_kernel kernel_fugue;
 	cl_command_queue commandQueue;
 	cl_program program;
 	cl_mem outputBuffer;
@@ -48,4 +50,5 @@ typedef struct {
 extern char *file_contents(const char *filename, int *length);
 extern int clDevicesNum(void);
 extern _clState *initCl(unsigned int gpu, char *name, size_t nameSize);
+extern bool allocateHashBuffer(unsigned int gpu, _clState *clState);
 #endif /* __OCL_H__ */
