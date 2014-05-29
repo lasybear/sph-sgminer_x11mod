@@ -516,7 +516,9 @@ void init_adl(int nDevs)
 
 		if (gpus[gpu].deven == DEV_DISABLED) {
 			gpus[gpu].gpu_engine =
+			gpus[gpu].gpu_engine_exit =
 			gpus[gpu].gpu_memclock =
+			gpus[gpu].gpu_memclock_exit =
 			gpus[gpu].gpu_vddc =
 			gpus[gpu].gpu_fan =
 			gpus[gpu].gpu_powertune = 0;
@@ -1589,6 +1591,41 @@ static void free_adl(void)
 #else
 	FreeLibrary(hDLL);
 #endif
+}
+
+void adl_reset_device(int device_id, bool _disabling, bool _freeing)
+{
+	struct gpu_adl *ga;
+
+	if (!adl_active)
+		return;
+
+	lock_adl();
+	ga = &gpus[device_id].adl;
+	// Only reset the values if we've changed them at any time
+	if (gpus[device_id].has_adl && ga->managed)
+	{
+		int lev;
+		lev = ga->lpOdParameters.iNumberOfPerformanceLevels - 1;
+
+		ga->DefPerfLev->aLevels[lev].iEngineClock = gpus[device_id].gpu_engine * 100; 
+		ga->DefPerfLev->aLevels[lev].iMemoryClock = gpus[device_id].gpu_memclock * 100;
+		if (_disabling) // Set exit/disable values of the GPU
+		{
+			if (gpus[device_id].gpu_engine_exit)
+				ga->DefPerfLev->aLevels[lev].iEngineClock = gpus[device_id].gpu_engine_exit * 100; 
+			if (gpus[device_id].gpu_memclock_exit)
+				ga->DefPerfLev->aLevels[lev].iMemoryClock = gpus[device_id].gpu_memclock_exit * 100;
+		}
+		ADL_Overdrive5_ODPerformanceLevels_Set(ga->iAdapterIndex, ga->DefPerfLev);
+
+		if (_freeing) {
+			free(ga->DefPerfLev);
+			ADL_Overdrive5_FanSpeed_Set(ga->iAdapterIndex, 0, &ga->DefFanSpeedValue);
+			ADL_Overdrive5_FanSpeedToDefault_Set(ga->iAdapterIndex, 0); 		
+		}
+	}
+	unlock_adl();
 }
 
 void clear_adl(int nDevs)
