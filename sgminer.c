@@ -629,6 +629,25 @@ void get_intrange(char *arg, int *val1, int *val2)
 		*val2 = *val1;
 }
 
+void get_intexitval(char *arg, int *val1, int *val2)
+{
+	if (sscanf(arg, "%d:%d", val1, val2) == 1)
+		*val2 = *val1;
+}
+
+void get_intrangeexitval(char *arg, int *val1, int *val2, int *val3)
+{
+	if (sscanf(arg, "%d:%d", val2, val3) == 2)
+	{
+		*val1 = *val2;
+	}
+	else if (sscanf(arg, "%d-%d:%d", val1, val2, val3) != 3)
+	{
+		get_intrange(arg, val1, val2);
+		*val3 = *val2;
+	}
+}
+
 static char *set_devices(char *arg)
 {
 	int i, val1 = 0, val2 = 0;
@@ -2173,12 +2192,36 @@ static bool shared_strategy(void)
 } while (0)
 
 /* Must be called with curses mutex lock held and curses_active */
+static void curses_print_uptime(void)
+{
+	struct timeval now, tv;
+	unsigned int days, hours;
+	div_t d;
+
+	cgtime(&now);
+	timersub(&now, &total_tv_start, &tv);
+	d = div(tv.tv_sec, 86400);
+	days = d.quot;
+	d = div(d.rem, 3600);
+	hours = d.quot;
+	d = div(d.rem, 60);
+	cg_wprintw(statuswin, " - [%u day%c %02d:%02d:%02d]"
+		, days
+		, (days == 1) ? ' ' : 's'
+		, hours
+		, d.quot
+		, d.rem
+	);
+}
+
+/* Must be called with curses mutex lock held and curses_active */
 static void curses_print_status(void)
 {
 	struct pool *pool = current_pool();
 
 	wattron(statuswin, A_BOLD);
 	cg_mvwprintw(statuswin, 0, 0, PACKAGE " " VERSION " - Started: %s", datestamp);
+	curses_print_uptime();
 	wattroff(statuswin, A_BOLD);
 	mvwhline(statuswin, 1, 0, '-', 80);
 	cg_mvwprintw(statuswin, 2, 0, "%s", statusline);
@@ -4310,7 +4353,8 @@ void write_config(FILE *fcfg)
 #ifdef HAVE_ADL
 		fputs("\",\n\"gpu-engine\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
-			fprintf(fcfg, "%s%d-%d", i > 0 ? "," : "", gpus[i].min_engine, gpus[i].gpu_engine);
+			fprintf(fcfg, gpus[i].gpu_engine_exit != gpus[i].gpu_engine ? "%s%d-%d:%d" : "%s%d-%d",
+			i > 0 ? "," : "", gpus[i].min_engine, gpus[i].gpu_engine, gpus[i].gpu_engine_exit);
 
 		fputs("\",\n\"gpu-fan\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
@@ -4318,7 +4362,8 @@ void write_config(FILE *fcfg)
 
 		fputs("\",\n\"gpu-memclock\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
-			fprintf(fcfg, "%s%d", i > 0 ? "," : "", gpus[i].gpu_memclock);
+			fprintf(fcfg, gpus[i].gpu_memclock_exit != gpus[i].gpu_memclock ? "%s%d:%d" : "%s%d",
+			i > 0 ? "," : "", gpus[i].gpu_memclock, gpus[i].gpu_memclock_exit);
 
 		fputs("\",\n\"gpu-memdiff\" : \"", fcfg);
 		for(i = 0; i < nDevs; i++)
@@ -5815,6 +5860,13 @@ static struct work *hash_pop(bool blocking)
 			if (rc && !no_work) {
 				no_work = true;
 				applog(LOG_WARNING, "Waiting for work to be available from pools.");
+				#ifdef HAVE_ADL
+				// Set all GPUs to idle (same as exit and disabled) state.
+				applog(LOG_WARNING, "Setting GPUs to idle performance.");
+				int i;
+				for(i = 0; i < nDevs; i++)
+				adl_reset_device(i, true, false);
+				#endif
 			}
 		} while (!HASH_COUNT(staged_work));
 	}
