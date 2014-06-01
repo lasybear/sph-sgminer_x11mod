@@ -533,6 +533,7 @@ struct pool *add_pool(void)
 	sprintf(buf, "Pool %d", pool->pool_no);
 
 	pool->poolname = strdup(buf);
+	pool->haspoolname = false;
 
 	pools = realloc(pools, sizeof(struct pool *) * (total_pools + 2));
 	pools[total_pools++] = pool;
@@ -780,6 +781,8 @@ static char *set_poolname(char *arg)
 
 	applog(LOG_DEBUG, "Setting pool %i name to %s", pool->pool_no, arg);
 	opt_set_charp(arg, &pool->poolname);
+
+	pool->haspoolname = true;
 
 	return NULL;
 }
@@ -2249,7 +2252,7 @@ static void curses_print_status(void)
 			have_longpoll ? "with": "without");
 	} else {
 		cg_mvwprintw(statuswin, 4, 0, "Connected to %s (%s) diff %s as user %s",
-			     pool->poolname,
+			     pool->haspoolname ? pool->poolname : (pool->has_stratum ? pool->rpc_url+14 : pool->rpc_url+7),
 			     pool->has_stratum ? "stratum" : (pool->has_gbt ? "GBT" : "longpoll"),
 			     pool->diff, pool->rpc_user);
 	}
@@ -4643,13 +4646,16 @@ updated:
 		disp_name = pool->poolname;
 		if (strlen(disp_name) < 1)
 		{
-			disp_name = pool->rpc_url;
+			disp_name = "noname";
 		}
-		wlogprint("%s Quota %d Prio %d: '%s'  User:%s\n",
+
+		wlogprint("%s Quota %d Prio %d: '%s' %s User:%s\n",
 			pool->idle ? "Dead" : "Alive",
 			pool->quota,
 			pool->prio,
-			disp_name, pool->rpc_user);
+			disp_name,
+			pool->rpc_url,
+			pool->rpc_user);
 		wattroff(logwin, A_BOLD | A_DIM);
 	}
 retry:

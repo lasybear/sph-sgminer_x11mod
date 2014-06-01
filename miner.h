@@ -1190,6 +1190,7 @@ struct stratum_work {
 struct pool {
 	int pool_no;
 	char *poolname;
+	bool haspoolname;
 	int prio;
 	int accepted, rejected;
 	int seq_rejects;
