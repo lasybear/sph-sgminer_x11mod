@@ -2249,7 +2249,7 @@ static void curses_print_status(void)
 			have_longpoll ? "with": "without");
 	} else {
 		cg_mvwprintw(statuswin, 4, 0, "Connected to %s (%s) diff %s as user %s",
-			     pool->poolname,
+			     pool->has_stratum ? pool->rpc_url+14 : pool->rpc_url+7,
 			     pool->has_stratum ? "stratum" : (pool->has_gbt ? "GBT" : "longpoll"),
 			     pool->diff, pool->rpc_user);
 	}
@@ -4641,12 +4641,9 @@ updated:
 			break;
 		}
 
-		disp_name = pool->poolname;
-		if (strlen(disp_name) < 1)
-		{
-			disp_name = pool->rpc_url;
-		}
-		wlogprint("%s Quota %d Prio %d: '%s'  User:%s\n",
+		disp_name = pool->rpc_url;
+		
+		wlogprint("%s Quota %d Prio %d: '%s' User:%s\n",
 			pool->idle ? "Dead" : "Alive",
 			pool->quota,
 			pool->prio,
