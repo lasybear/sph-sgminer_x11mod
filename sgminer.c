@@ -2138,7 +2138,7 @@ static void suffix_string(uint64_t val, char *buf, size_t bufsiz, int sigdigits)
 static void suffix_string_double(double val, char *buf, size_t bufsiz, int sigdigits)
 {
 	if (val < 10) {
-		snprintf(buf, bufsiz, "%.3lf", val);
+		snprintf(buf, bufsiz, "%.3f", val);
 	} else {
 		return suffix_string(val, buf, bufsiz, sigdigits);
 	}
@@ -2332,8 +2332,9 @@ static void curses_print_devstatus(struct cgpu_info *cgpu, int count)
 	adj_width(cgpu->hw_errors, &hwwidth);
 	adj_width(wu, &wuwidth);
 
-	cg_wprintw(statuswin, "/%6sh/s | R:%*.1f%% HW:%*d WU:%*.3f/m",
+	cg_wprintw(statuswin, "/%6sh/s | A:%d R:%*.1f%% HW:%*d WU:%*.3f/m",
 			displayed_hashes,
+			cgpu->accepted,
 			drwidth, reject_pct,
 			hwwidth, cgpu->hw_errors,
 			wuwidth + 2, wu);
@@ -5146,10 +5147,10 @@ static void hashmeter(int thr_id, struct timeval *diff,
 	suffix_string(dr64, displayed_rolling, sizeof(displayed_rolling), 4);
 
 	snprintf(statusline, sizeof(statusline),
-		"%s(%ds):%s (avg):%sh/s | A:%.0f  R:%.0f  HW:%d  WU:%.3f/m",
+		"%s(%ds):%s (avg):%sh/s | A:%d  R:%d  HW:%d  WU:%.3f/m",
 		want_per_device_stats ? "ALL " : "",
 		opt_log_interval, displayed_rolling, displayed_hashes,
-		total_diff_accepted, total_diff_rejected, hw_errors,
+		total_accepted, total_rejected, hw_errors,
 		total_diff1 / total_secs * 60);
 
 	local_mhashes_done = 0;
