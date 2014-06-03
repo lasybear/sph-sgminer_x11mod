@@ -394,6 +394,7 @@ enum cl_kernels {
 	KL_MARUCOIN,
 	KL_X11MOD,
 	KL_X13MOD,
+	KL_X13MODOLD,
 };
 
 enum dev_reason {

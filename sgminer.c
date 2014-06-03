@@ -4348,6 +4348,9 @@ void write_config(FILE *fcfg)
 				case KL_X13MOD:
 					fprintf(fcfg, X13MOD_KERNNAME);
 					break;
+				case KL_X13MODOLD:
+					fprintf(fcfg, X13MODOLD_KERNNAME);
+					break;
 			}
 		}
 
@@ -6200,6 +6203,7 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
 			break;
 		case KL_MARUCOIN:
 		case KL_X13MOD:
+		case KL_X13MODOLD:
 			marucoin_regenhash(work);
 			break;
 		default:

@@ -370,7 +370,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 	/////////////////////////////////////////////////////////////////
 	// Create an OpenCL command queue
 	/////////////////////////////////////////////////////////////////
-	if ((cgpu->kernel == KL_X11MOD) || (cgpu->kernel == KL_X13MOD))
+	if ((cgpu->kernel == KL_X11MOD) || (cgpu->kernel == KL_X13MOD) || (cgpu->kernel == KL_X13MODOLD))
 		clState->commandQueue = clCreateCommandQueue(clState->context, devices[gpu],
 							     0, &status);
 	else
@@ -573,6 +573,11 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize)
 			strcpy(filename, X13MOD_KERNNAME".cl");
 			strcpy(binaryfilename, X13MOD_KERNNAME);
 			break;
+		case KL_X13MODOLD:
+			applog(LOG_WARNING, "Kernel x13mod (AMD HD 5xxx/6xxx) is experimental.");
+			strcpy(filename, X13MOD_KERNNAME".cl");
+			strcpy(binaryfilename, X13MODOLD_KERNNAME);
+			break;
 		case KL_NONE: /* Shouldn't happen */
 			break;
 	}
@@ -706,7 +711,12 @@ build:
 	/* create a cl program executable for all the devices specified */
 	char *CompilerOptions = calloc(1, 256);
 
-	sprintf(CompilerOptions, "-I \"%s\" -I \"%s\" -I \"%skernel\" -I \".\" -D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d",
+	if (clState->chosen_kernel == KL_X13MODOLD)
+		sprintf(CompilerOptions, "-I \"%s\" -I \"%s\" -I \"%skernel\" -I \".\" -D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d -D X13MODOLD",
+			opt_kernel_path, sgminer_path, sgminer_path,
+			cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);
+	else
+		sprintf(CompilerOptions, "-I \"%s\" -I \"%s\" -I \"%skernel\" -I \".\" -D LOOKUP_GAP=%d -D CONCURRENT_THREADS=%d -D WORKSIZE=%d",
 			opt_kernel_path, sgminer_path, sgminer_path,
 			cgpu->lookup_gap, (unsigned int)cgpu->thread_concurrency, (int)clState->wsize);
 
@@ -919,6 +929,19 @@ built:
 	    CL_CREATE_KERNEL(hamsi);
 	    CL_CREATE_KERNEL(fugue);
 	}
+	else if (clState->chosen_kernel == KL_X13MODOLD) {
+	    CL_CREATE_KERNEL(blake);
+	    CL_CREATE_KERNEL(bmw);
+	    CL_CREATE_KERNEL(groestl);
+	    CL_CREATE_KERNEL(skein);
+	    CL_CREATE_KERNEL(jh);
+	    CL_CREATE_KERNEL(keccak);
+	    CL_CREATE_KERNEL(luffa);
+	    CL_CREATE_KERNEL(cubehash);
+	    CL_CREATE_KERNEL(shavite);
+	    CL_CREATE_KERNEL(simd);
+	    CL_CREATE_KERNEL(echo_hamsi_fugue);
+	}
 	else {
 	    clState->kernel = clCreateKernel(clState->program, "search", &status);
 	    if (status != CL_SUCCESS) {
@@ -927,7 +950,7 @@ built:
 	    }
 	}
 
-	if ((cgpu->kernel == KL_X11MOD) || (cgpu->kernel == KL_X13MOD)) {
+	if ((cgpu->kernel == KL_X11MOD) || (cgpu->kernel == KL_X13MOD) || (cgpu->kernel == KL_X13MODOLD)) {
 		if (!allocateHashBuffer(gpu, clState))
 			return NULL;
 	}
