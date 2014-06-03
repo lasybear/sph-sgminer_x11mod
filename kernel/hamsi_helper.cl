@@ -9283,7 +9283,7 @@ __constant static const sph_u32 T512_62[4][16] = {
 
 #define INPUT_BIG   do { \
 		unsigned acc = buf(0); \
-		const sph_u32 *rp; \
+		__constant const sph_u32 *rp; \
 		rp = &T512_0[acc >> 6][0]; \
 		m0 = rp[0]; \
 		m1 = rp[1]; \
@@ -10929,7 +10929,7 @@ __constant static const sph_u32 T512_63[2][16] = {
 
 #define INPUT_BIG   do { \
 		unsigned acc = buf(0); \
-		const sph_u32 *rp; \
+		__constant const sph_u32 *rp; \
 		rp = &T512_0[acc >> 5][0]; \
 		m0 = rp[0]; \
 		m1 = rp[1]; \
@@ -12903,7 +12903,7 @@ __constant static const sph_u32 T512_60[16][16] = {
 
 #define INPUT_BIG   do { \
 		unsigned acc = buf(0); \
-		const sph_u32 *rp; \
+		__constant const sph_u32 *rp; \
 		rp = &T512_0[acc >> 4][0]; \
 		m0 = rp[0]; \
 		m1 = rp[1]; \
@@ -15630,7 +15630,7 @@ __constant static const sph_u32 T512_60[16][16] = {
 
 #define INPUT_BIG   do { \
 		unsigned acc = buf(0); \
-		const sph_u32 *rp; \
+		__constant const sph_u32 *rp; \
 		rp = &T512_0[acc >> 3][0]; \
 		m0 = rp[0]; \
 		m1 = rp[1]; \
@@ -19836,7 +19836,7 @@ __constant static const sph_u32 T512_60[16][16] = {
 
 #define INPUT_BIG   do { \
 		unsigned acc = buf(0); \
-		const sph_u32 *rp; \
+		__constant const sph_u32 *rp; \
 		rp = &T512_0[acc >> 2][0]; \
 		m0 = rp[0]; \
 		m1 = rp[1]; \
@@ -26993,7 +26993,7 @@ __constant static const sph_u32 T512_63[2][16] = {
 
 #define INPUT_BIG   do { \
 		unsigned acc = buf(0); \
-		const sph_u32 *rp; \
+		__constant const sph_u32 *rp; \
 		rp = &T512_0[acc >> 1][0]; \
 		m0 = rp[0]; \
 		m1 = rp[1]; \
@@ -39491,7 +39491,7 @@ __constant static const sph_u32 T512_56[256][16] = {
 
 #define INPUT_BIG   do { \
 		unsigned acc = buf(0); \
-		const sph_u32 *rp; \
+		__constant const sph_u32 *rp; \
 		rp = &T512_0[acc][0]; \
 		m0 = rp[0]; \
 		m1 = rp[1]; \
