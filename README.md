@@ -112,7 +112,7 @@ Then:
     CFLAGS="-O2 -Wall -march=native" ./configure <options>
     make
 
-To compile a version that can be used accross machines, remove
+To compile a version that can be used across machines, remove
 `-march=native`.
 
 To compile a debug version, replace `-O2` with `-ggdb`.
